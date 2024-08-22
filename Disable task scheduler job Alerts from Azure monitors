@@ -1,0 +1,23 @@
+# Connect to Azure with system-assigned managed identity
+$AzureContext = (Connect-AzAccount -Identity).context
+
+# Set and store context
+$AzureContext = Set-AzContext -SubscriptionName $AzureContext.Subscription -DefaultProfile $AzureContext
+ 
+$tagvalue = "Long Running Task"
+$taglist = Get-AzResource -ResourceType microsoft.insights/scheduledqueryrules -Tag @{Maintenance=$tagvalue; Region=$Region; Environment=$Environment}
+ 
+Write-Output "Setting enabled to $EnableAlert for $tagvalue in $Region - $Environment"
+# Output the header
+$header = "Resource Name", "Resource Group", "Resource Type", "Enabled"
+$headerOutput = "{0,-50} {1,-30} {2,-50} {3,-20}" -f $header
+Write-Output $headerOutput
+ 
+foreach ($tag in $taglist) {
+    if ($tag.ResourceType -eq "microsoft.insights/scheduledqueryrules") {
+        $UpdateQuery = Update-AzScheduledQueryRule -Name $tag.Name -ResourceGroupName $tag.ResourceGroupName -Enabled:$EnableAlert
+    }
+    $UpdatedRule = Get-AzScheduledQueryRule -Name $tag.Name -ResourceGroupName $tag.ResourceGroupName
+    $output = "{0,-50} {1,-30} {2,-50} {3,-20}" -f $tag.Name,  $tag.ResourceGroupName, $tag.ResourceType, $UpdatedRule.Enabled;
+    Write-Output $output;
+}
